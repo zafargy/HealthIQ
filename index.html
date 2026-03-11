@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>HealthIQ</title>
+
+<!-- PWA manifest & iOS meta -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0EA5E9">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="HealthIQ">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--accent:#0EA5E9;--accent-dk:#0284C7;--accent-lt:rgba(14,165,233,.1)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:#EBF0F5;color:#0F172A;min-height:100vh}
+
+/* ── Header ── */
+.hdr{background:#fff;border-bottom:1px solid #DDE6EE;padding:12px 24px;display:flex;align-items:center;gap:12px}
+.hdr-brand{display:flex;align-items:center;gap:10px;flex:1}
+.hdr-icon{width:34px;height:34px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;color:#fff;flex-shrink:0;transition:background .3s}
+.hdr-title{font-size:16px;font-weight:700;color:#0F172A}
+.hdr-sub{font-size:11px;color:#94A3B8;margin-top:1px}
+.hdr-acts{display:flex;gap:8px;align-items:center;flex-shrink:0}
+
+/* ── Profile switcher ── */
+.profile-wrap{position:relative;flex-shrink:0}
+.profile-pill{display:flex;align-items:center;gap:8px;padding:6px 12px 6px 7px;border-radius:24px;border:1px solid #DDE6EE;cursor:pointer;background:#F8FAFC;transition:background .15s;user-select:none}
+.profile-pill:hover{background:#F1F5F9}
+.p-avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0}
+.p-name{font-size:13px;font-weight:600;color:#1E293B;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p-caret{font-size:10px;color:#94A3B8;transition:transform .15s}
+.p-caret.open{transform:rotate(180deg)}
+.profile-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:#fff;border:1px solid #DDE6EE;border-radius:14px;min-width:220px;box-shadow:0 8px 32px rgba(0,0,0,.12);z-index:50;overflow:hidden;display:none}
+.profile-dropdown.open{display:block}
+.pd-hdr{padding:10px 14px 6px;font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px}
+.pd-item{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;transition:background .1s}
+.pd-item:hover{background:#F8FAFC}
+.pd-item.active{background:#EFF9FF}
+.pd-name{flex:1;font-size:13px;font-weight:500;color:#1E293B}
+.pd-count{font-size:11px;color:#94A3B8}
+.pd-check{font-size:14px;color:var(--accent);font-weight:700;width:14px;text-align:right}
+.pd-sep{height:1px;background:#F1F5F9;margin:4px 0}
+.pd-action{display:flex;align-items:center;gap:9px;padding:9px 14px;cursor:pointer;transition:background .1s;font-size:13px;color:#64748B}
+.pd-action:hover{background:#F8FAFC}
+.pd-action-icon{width:24px;height:24px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+
+/* ── Buttons ── */
+.btn{padding:7px 14px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;display:inline-flex;align-items:center;gap:5px;line-height:1}
+.btn-pri{background:var(--accent);color:#fff}.btn-pri:hover{background:var(--accent-dk)}
+.btn-sec{background:#F1F5F9;color:#475569;border:1px solid #CBD5E1}.btn-sec:hover{background:#E2E8F0}
+.btn-ghost{background:transparent;border:1px solid #CBD5E1;color:#64748B}.btn-ghost:hover{background:#F8FAFC}
+.btn-del{background:#FEF2F2;color:#DC2626;border:none;padding:3px 8px;font-size:11px;border-radius:6px}.btn-del:hover{background:#FEE2E2}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-danger{background:#FEF2F2;color:#DC2626;border:1px solid #FECACA}.btn-danger:hover{background:#FEE2E2}
+
+/* ── Tabs ── */
+.tabs-bar{background:#fff;border-bottom:1px solid #DDE6EE;padding:0 24px;position:sticky;top:0;z-index:20}
+.tabs{display:flex}
+.tab{padding:13px 18px;font-size:14px;font-weight:500;color:#64748B;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;user-select:none}
+.tab:hover{color:#0F172A}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* ── Layout ── */
+.main{padding:24px;max-width:1440px;margin:0 auto}
+
+/* ── Summary bar ── */
+.sum-bar{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap}
+.sum-card{background:#fff;border-radius:14px;padding:14px 18px;flex:1;min-width:120px;border:1px solid #DDE6EE}
+.sum-card .lbl{font-size:11px;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.sum-card .val{font-size:28px;font-weight:800;margin-top:3px}
+.c-blue{color:var(--accent)}.c-ok{color:#10B981}.c-warn{color:#F59E0B}.c-bad{color:#EF4444}.c-dim{color:#94A3B8;font-size:16px!important}
+
+/* ── Category section ── */
+.cat-sec{margin-bottom:28px}
+.cat-hdr{font-size:12px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.cat-hdr::after{content:'';flex:1;height:1px;background:#DDE6EE}
+
+/* ── Biomarker cards with flip ── */
+.bm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.bm-card{border-radius:14px;border:1px solid #DDE6EE;perspective:700px;transition:box-shadow .15s,transform .1s}
+.bm-card:hover{box-shadow:0 4px 16px rgba(14,165,233,.12);transform:translateY(-1px)}
+.bm-inner{display:grid;grid-template-areas:"face";transform-style:preserve-3d;transition:transform .55s cubic-bezier(.4,.2,.2,1)}
+.bm-card.flipped .bm-inner{transform:rotateY(180deg)}
+.bm-front,.bm-back{grid-area:face;backface-visibility:hidden;-webkit-backface-visibility:hidden;padding:14px 16px;border-radius:13px}
+.bm-back{transform:rotateY(180deg);background:linear-gradient(135deg,#EFF9FF,#E0F2FE);display:flex;flex-direction:column;cursor:pointer}
+.bm-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;gap:4px}
+.bm-name{font-size:12px;color:#94A3B8;font-weight:500;flex:1}
+.bm-info{width:17px;height:17px;border-radius:50%;border:1.5px solid #CBD5E1;background:transparent;color:#94A3B8;font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;font-style:italic;line-height:1}
+.bm-info:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-lt)}
+.bm-val-row{display:flex;align-items:baseline;justify-content:space-between;gap:6px}
+.bm-val{font-size:24px;font-weight:800;color:#0F172A}
+.bm-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.bm-unit{font-size:11px;color:#94A3B8}
+.bm-ref{font-size:10.5px;color:#CBD5E1;margin-top:4px}
+.bm-back-name{font-size:12px;font-weight:700;color:var(--accent);margin-bottom:8px}
+.bm-back-desc{font-size:12px;color:#334155;line-height:1.55;flex:1}
+.bm-back-hint{font-size:10px;color:#94A3B8;margin-top:10px;letter-spacing:.2px}
+
+/* ── Status badges ── */
+.badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;letter-spacing:.2px}
+.b-normal{background:#EBF5FB;color:#2E86C1}
+.b-optimal{background:#E8F8F5;color:#1A7A5E}
+.b-borderline{background:#FEF9C3;color:#B45309}
+.b-high,.b-low{background:#FEE7E7;color:#CC2222}
+.b-tracking{background:#F1F5F9;color:#94A3B8}
+.b-unknown{background:#F1F5F9;color:#CBD5E1}
+
+/* ── Range bar ── */
+.rbar-wrap{margin-top:10px;height:4px;background:#EBF0F5;border-radius:2px;position:relative}
+.rbar-zone{position:absolute;height:100%;border-radius:2px}
+.rbar-dot{position:absolute;top:50%;transform:translate(-50%,-50%);width:10px;height:10px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+
+/* ── Notes pill ── */
+.notes-pill{font-size:11px;color:#64748B;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:6px 10px;margin-top:8px;display:flex;gap:6px;align-items:flex-start}
+
+/* ── Trends ── */
+.trends-layout{display:grid;grid-template-columns:220px 1fr;gap:18px;align-items:start}
+.ts-sidebar{background:#fff;border-radius:14px;padding:14px;border:1px solid #DDE6EE;position:sticky;top:62px;max-height:calc(100vh - 90px);overflow-y:auto}
+.ts-cat{font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.6px;padding:10px 6px 4px}
+.ts-item{padding:7px 8px;border-radius:8px;cursor:pointer;font-size:13px;color:#475569;transition:background .1s;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ts-item:hover{background:#F1F5F9}
+.ts-item.active{background:#EFF9FF;color:var(--accent-dk);font-weight:600}
+.ts-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.trends-main{background:#fff;border-radius:14px;padding:22px;border:1px solid #DDE6EE;min-height:420px;display:flex;flex-direction:column}
+.tc-title{font-size:18px;font-weight:700}
+.tc-sub{font-size:13px;color:#94A3B8;margin-top:2px}
+.tc-wrap{flex:1;position:relative;min-height:300px;margin-top:16px}
+.tip{margin-top:14px;padding:12px 14px;background:#EFF9FF;border:1px solid #BAE6FD;border-radius:10px;font-size:13px;color:#0369A1}
+
+/* ── Table ── */
+.tbl-outer{background:#fff;border-radius:14px;border:1px solid #DDE6EE;overflow:auto}
+.dtbl{width:100%;border-collapse:collapse;font-size:13px}
+.dtbl th{padding:11px 14px;text-align:left;font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;background:#F8FAFC;border-bottom:2px solid #DDE6EE;white-space:nowrap;position:sticky;top:0;z-index:5}
+.dtbl td{padding:9px 14px;border-bottom:1px solid #F1F5F9;white-space:nowrap;vertical-align:middle}
+.dtbl tr:last-child td{border-bottom:none}
+.dtbl tr:hover td{background:#FAFCFE}
+.cat-row td{background:#F8FAFC!important;font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;padding:7px 14px}
+.td-name{font-weight:500;color:#1E293B;min-width:180px}
+.td-unit{color:#94A3B8;font-size:11px}
+.td-ref{color:#CBD5E1;font-size:11px;min-width:90px}
+.td-val{font-weight:700;border-radius:20px;padding:3px 10px;text-align:center;min-width:80px;font-size:13px}
+.td-normal{background:#EBF5FB;color:#2E86C1}
+.td-optimal{background:#E8F8F5;color:#1A7A5E}
+.td-borderline{background:#FEF9C3;color:#B45309}
+.td-high,.td-low{background:#FEE7E7;color:#CC2222}
+.td-tracking,.td-unknown{background:#F8FAFC;color:#94A3B8}
+
+/* ── Modal ── */
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:#fff;border-radius:18px;width:100%;max-width:700px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.22)}
+.modal-sm{max-width:420px}
+.m-hdr{padding:18px 22px;border-bottom:1px solid #DDE6EE;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:2;border-radius:18px 18px 0 0}
+.m-title{font-size:17px;font-weight:700}
+.m-body{padding:20px 22px}
+.m-ftr{padding:14px 22px;border-top:1px solid #DDE6EE;display:flex;justify-content:space-between;align-items:center;position:sticky;bottom:0;background:#fff;border-radius:0 0 18px 18px}
+.m-close{background:none;border:none;cursor:pointer;color:#94A3B8;font-size:18px;line-height:1;padding:4px;border-radius:6px}
+.m-close:hover{background:#F1F5F9;color:#475569}
+
+/* ── Profile Manager ── */
+.prof-list{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.prof-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid #DDE6EE;border-radius:12px;background:#FAFCFE}
+.prof-avatar{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;flex-shrink:0}
+.prof-info{flex:1}
+.prof-name{font-size:14px;font-weight:600;color:#0F172A}
+.prof-meta{font-size:12px;color:#94A3B8;margin-top:1px}
+.prof-actions{display:flex;gap:6px}
+.prof-add{border:2px dashed #CBD5E1;background:transparent;padding:12px 14px;border-radius:12px;width:100%;cursor:pointer;font-size:13px;color:#64748B;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.prof-add:hover{border-color:var(--accent);color:var(--accent);background:#EFF9FF}
+.color-swatch{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:transform .1s}
+.color-swatch.selected{border-color:#0F172A;transform:scale(1.2)}
+.color-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+
+/* ── Form ── */
+.fg{margin-bottom:14px}
+.flbl{display:block;font-size:13px;font-weight:500;color:#475569;margin-bottom:5px}
+.fin{width:100%;padding:8px 11px;border:1px solid #CBD5E1;border-radius:8px;font-size:14px;color:#0F172A;outline:none;background:#fff}
+.fin:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-lt)}
+.fsec{font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid #F1F5F9}
+.fgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.ffl{font-size:11px;color:#64748B;margin-bottom:3px}
+.ffin{width:100%;padding:6px 9px;border:1px solid #E2E8F0;border-radius:6px;font-size:13px;color:#0F172A;outline:none;background:#fff}
+.ffin:focus{border-color:var(--accent)}
+.ffin-applied{background:#EFF9FF!important;border-color:var(--accent)!important;box-shadow:0 0 0 2px var(--accent-lt)}
+
+/* ── Add Reading mode bar ── */
+.add-mode-bar{display:flex;border-bottom:1px solid #DDE6EE;background:#F8FAFC}
+.add-mode-btn{flex:1;padding:11px 16px;border:none;background:transparent;cursor:pointer;font-size:13px;font-weight:500;color:#64748B;transition:all .15s;border-bottom:2px solid transparent;margin-bottom:-1px}
+.add-mode-btn.active{color:var(--accent);border-bottom-color:var(--accent);background:#fff}
+.add-mode-btn:hover:not(.active){background:#F1F5F9}
+
+/* ── Scan panel ── */
+.scan-drop{border:2px dashed #CBD5E1;border-radius:14px;padding:44px 24px;text-align:center;transition:all .2s;background:#FAFCFE;cursor:pointer}
+.scan-drop:hover,.scan-drop.drag-over{border-color:var(--accent);background:#EFF9FF}
+.scan-drop-icon{font-size:40px;margin-bottom:10px}
+.scan-drop-title{font-size:15px;font-weight:600;color:#1E293B;margin-bottom:4px}
+.scan-drop-sub{font-size:13px;color:#94A3B8}
+.scan-progress-wrap{padding:8px 0 4px;text-align:center}
+.scan-progress-lbl{font-size:13px;color:#475569;margin-bottom:8px}
+.scan-bar{height:8px;background:#E2E8F0;border-radius:4px;overflow:hidden}
+.scan-bar-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .3s ease}
+.scan-results-hdr{font-size:14px;font-weight:700;color:#0F172A;margin:14px 0 4px}
+.scan-results-sub{font-size:12px;color:#64748B;margin-bottom:12px}
+.scan-detected{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;margin-bottom:14px}
+.scan-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid #DDE6EE;border-radius:8px;background:#fff;cursor:pointer;user-select:none}
+.scan-row:hover{background:#F8FAFC}
+.scan-row-name{flex:1;font-size:13px;font-weight:500;color:#1E293B}
+.scan-row-conv{font-size:10px;color:#B45309;background:#FEF9C3;padding:2px 6px;border-radius:4px;white-space:nowrap}
+.scan-row-val{font-size:14px;font-weight:700;color:var(--accent);min-width:52px;text-align:right}
+.scan-row-unit{font-size:11px;color:#94A3B8;min-width:52px}
+.scan-none{padding:28px 20px;text-align:center;color:#94A3B8;font-size:13px}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;right:24px;background:#0F172A;color:#fff;padding:11px 18px;border-radius:10px;font-size:14px;box-shadow:0 4px 16px rgba(0,0,0,.25);z-index:300;opacity:0;transform:translateY(8px);transition:opacity .2s,transform .2s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* ── Empty / Responsive ── */
+.empty{text-align:center;padding:60px 20px;color:#94A3B8}
+.empty-icon{font-size:40px;margin-bottom:12px}
+.empty-title{font-size:16px;font-weight:600;color:#475569}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
+@media(max-width:820px){.trends-layout{grid-template-columns:1fr}.ts-sidebar{position:static;max-height:none}.fgrid{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.hdr-acts .btn-sec{display:none}.fgrid{grid-template-columns:1fr}.bm-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+<input type="file" id="file-imp" accept=".json" style="display:none" onchange="onImport(event)">
+
+<script>
+// ════════════════════════════════════════════════════
+//  CONFIG
+// ════════════════════════════════════════════════════
+const STORAGE_KEY = 'healthiq_v1';
+const PROFILE_COLORS = ['#0EA5E9','#10B981','#8B5CF6','#F59E0B','#EF4444','#EC4899','#14B8A6','#F97316','#6366F1','#84CC16'];
+
+const CATS = {
+  CBC:'Complete Blood Count', Diff:'WBC Differential',
+  Elec:'Electrolytes', Meta:'Metabolic Panel',
+  Lipids:'Lipid Panel', Liver:'Liver Function',
+  Iron:'Iron Studies', Cardiac:'Cardiac',
+  Renal:'Renal', Inflam:'Inflammation', Body:'Body'
+};
+
+const BM = {
+  // CBC
+  WBC:     {name:'White Blood Cells',     unit:'×10³/μL',cat:'CBC',   min:4.0, max:10.5, desc:'White blood cells are your body\'s infection fighters — the cornerstone of your immune defence.'},
+  RBC:     {name:'Red Blood Cells',        unit:'×10⁶/μL',cat:'CBC',   min:4.4, max:6.3,  desc:'Red blood cells carry oxygen from your lungs to every tissue. Low count may indicate anaemia.'},
+  HGB:     {name:'Hemoglobin',             unit:'g/dL',   cat:'CBC',   min:13.0,max:17.6, desc:'Haemoglobin is the protein in red cells that binds and transports oxygen. Low levels indicate anaemia.'},
+  HCT:     {name:'Hematocrit',             unit:'%',      cat:'CBC',   min:40.0,max:52.0, desc:'The fraction of blood volume occupied by red cells. Closely related to haemoglobin levels.'},
+  MCV:     {name:'Mean Corp. Volume',      unit:'fL',     cat:'CBC',   min:77.0,max:100.0,desc:'Average red cell size. Low values suggest iron deficiency; high values suggest B12 or folate deficiency.'},
+  MCH:     {name:'Mean Corp. Hgb',         unit:'pg',     cat:'CBC',   min:26.0,max:34.5, desc:'Average haemoglobin content per red cell. Usually mirrors MCV trends.'},
+  MCHC:    {name:'Mean Corp. Hgb Conc.',   unit:'g/dL',   cat:'CBC',   min:31.6,max:36.0, desc:'Concentration of haemoglobin within each red cell. Low values suggest iron-deficient anaemia.'},
+  RDW:     {name:'RBC Distribution Width', unit:'%',      cat:'CBC',   min:11.5,max:15.1, desc:'Measures variation in red cell size. Elevated RDW can point to mixed nutritional deficiencies.'},
+  PLT:     {name:'Platelets',              unit:'×10³/μL',cat:'CBC',   min:140, max:450,  desc:'Platelets are tiny cells that form clots to stop bleeding. Low count increases bleeding risk.'},
+  // WBC Differential
+  NEUT_P:  {name:'Neutrophils %',          unit:'%',      cat:'Diff',  min:40.0,max:75.0, desc:'The most abundant white cell type — the frontline fighters against bacterial infections.'},
+  LYMPH_P: {name:'Lymphocytes %',          unit:'%',      cat:'Diff',  min:20.0,max:45.0, desc:'Lymphocytes coordinate adaptive immune responses and form long-term immune memory against viruses.'},
+  MONO_P:  {name:'Monocytes %',            unit:'%',      cat:'Diff',  min:2.0, max:10.0, desc:'Monocytes are large white cells that clean up pathogens and regulate inflammation.'},
+  EOS_P:   {name:'Eosinophils %',          unit:'%',      cat:'Diff',  min:1.0, max:6.0,  desc:'Eosinophils defend against parasites and play a role in allergic and asthmatic reactions.'},
+  BASO_P:  {name:'Basophils %',            unit:'%',      cat:'Diff',  min:0.0, max:1.5,  desc:'The rarest white cell type, involved in allergic inflammatory responses. Normally near zero.'},
+  NEUT_A:  {name:'Neutrophils (Abs)',       unit:'K/μL',   cat:'Diff',  min:2.5, max:7.5,  desc:'Absolute count of neutrophils — the principal soldiers against bacterial and fungal infections.'},
+  LYMPH_A: {name:'Lymphocytes (Abs)',       unit:'K/μL',   cat:'Diff',  min:1.0, max:3.5,  desc:'Absolute lymphocyte count. Includes T-cells, B-cells and NK cells — vital for viral immunity.'},
+  MONO_A:  {name:'Monocytes (Abs)',         unit:'K/μL',   cat:'Diff',  min:0.2, max:0.8,  desc:'Absolute monocyte count. These cells patrol the blood, then enter tissues as macrophages.'},
+  EOS_A:   {name:'Eosinophils (Abs)',       unit:'K/μL',   cat:'Diff',  min:0.04,max:0.45, desc:'Absolute eosinophil count. Elevated in allergies, asthma, eczema or parasitic infections.'},
+  BASO_A:  {name:'Basophils (Abs)',         unit:'K/μL',   cat:'Diff',  min:0.02,max:0.15, desc:'Absolute basophil count. Very small population involved in allergic and inflammatory responses.'},
+  // Electrolytes
+  Na:      {name:'Sodium',                 unit:'mmol/L', cat:'Elec',  min:136, max:145,  desc:'Sodium regulates fluid balance in and around cells. Essential for nerve and muscle function.'},
+  K:       {name:'Potassium',              unit:'mmol/L', cat:'Elec',  min:3.5, max:5.1,  desc:'Potassium is critical for heart rhythm and muscle contraction. Both high and low levels can be dangerous.'},
+  // Metabolic
+  GLUC:    {name:'Glucose',                unit:'mg/dL',  cat:'Meta',  min:74,  max:100,  desc:'Fasting blood glucose (sugar). Values above 100 mg/dL suggest pre-diabetes; ≥126 indicates diabetes.'},
+  HbA1c:   {name:'HbA1c',                  unit:'mmol/mol',cat:'Meta', min:null,max:42,   custom:true, desc:'Average blood sugar level over the past ~3 months. The key long-term marker for diabetes monitoring.'},
+  UREA:    {name:'Urea',                   unit:'mg/dL',  cat:'Meta',  min:10,  max:50,   desc:'Waste product of protein metabolism, filtered and excreted by the kidneys. Elevated in renal impairment.'},
+  CREA:    {name:'Creatinine',             unit:'mg/dL',  cat:'Meta',  min:0.6, max:1.2,  desc:'Creatinine is a muscle waste product filtered by kidneys. Elevated levels may signal reduced kidney function.'},
+  UA:      {name:'Uric Acid',              unit:'mg/dL',  cat:'Meta',  min:3.5, max:7.2,  desc:'Breakdown product of purines. High levels can cause gout (painful joint deposits) or kidney stones.'},
+  ESR:     {name:'ESR',                    unit:'mm/h',   cat:'Meta',  min:0,   max:15,   desc:'Erythrocyte sedimentation rate — a non-specific screening marker for inflammation or infection.'},
+  // Lipids
+  TC:      {name:'Total Cholesterol',      unit:'mg/dL',  cat:'Lipids',min:null,max:170,  custom:true, desc:'The sum of all cholesterol fractions (LDL + HDL + VLDL). Desirable level is below 170 mg/dL.'},
+  TRIG:    {name:'Triglycerides',          unit:'mg/dL',  cat:'Lipids',min:null,max:150,  custom:true, desc:'Blood fats linked to dietary intake and liver activity. High levels raise cardiovascular disease risk.'},
+  HDL:     {name:'HDL Cholesterol',        unit:'mg/dL',  cat:'Lipids',min:40,  max:null, custom:true, desc:'\'Good\' cholesterol that removes cholesterol from artery walls. Higher levels are protective.'},
+  NonHDL:  {name:'Non-HDL Cholesterol',    unit:'mg/dL',  cat:'Lipids',min:null,max:130,  custom:true, desc:'All cholesterol except HDL. A stronger predictor of cardiovascular risk than LDL alone.'},
+  LDL:     {name:'LDL Cholesterol',        unit:'mg/dL',  cat:'Lipids',min:null,max:130,  custom:true, desc:'\'Bad\' cholesterol that can accumulate in artery walls, leading to atherosclerosis. Lower is better.'},
+  // Liver
+  AST:     {name:'AST / SGOT',            unit:'U/L',    cat:'Liver', min:11,  max:34,   desc:'Liver enzyme that also rises with muscle injury or heart damage. Less liver-specific than ALT.'},
+  ALT:     {name:'ALT / SGPT',            unit:'U/L',    cat:'Liver', min:null,max:45,   desc:'The primary marker of liver cell inflammation. Elevated ALT strongly suggests liver stress or damage.'},
+  ALP:     {name:'Alkaline Phosphatase',   unit:'U/L',    cat:'Liver', min:50,  max:116,  desc:'Alkaline phosphatase is elevated in liver disease, bile duct obstruction or increased bone turnover.'},
+  Globulin:{name:'Serum Globulin',         unit:'g/L',    cat:'Liver', min:20,  max:35,   desc:'Proteins made by the liver and immune cells. Low levels may indicate liver dysfunction.'},
+  // Iron
+  Fe:      {name:'Serum Iron',             unit:'μg/dL',  cat:'Iron',  min:65,  max:175,  desc:'The amount of iron currently circulating in the blood. Fluctuates with meals and time of day.'},
+  Ferritin:{name:'Ferritin',              unit:'ng/mL',  cat:'Iron',  min:30,  max:400,  desc:'Iron storage protein — the single best marker of total iron stores in the body.'},
+  // Cardiac
+  HR:      {name:'Heart Rate',             unit:'bpm',    cat:'Cardiac',min:60, max:100,  desc:'Resting heart rate. Rates below 60 bpm can be normal in athletes (sinus bradycardia).'},
+  SBP:     {name:'Systolic BP',            unit:'mmHg',   cat:'Cardiac',min:null,max:120, custom:true, desc:'Peak arterial pressure when the heart contracts. The \'top\' number. Ideal is below 120 mmHg.'},
+  DBP:     {name:'Diastolic BP',           unit:'mmHg',   cat:'Cardiac',min:null,max:80,  custom:true, desc:'Arterial pressure between heartbeats. The \'bottom\' number. Ideal is below 80 mmHg.'},
+  SpO2:    {name:'Blood Oxygen (SpO₂)',    unit:'%',      cat:'Cardiac',min:95, max:100,  desc:'Oxygen saturation of haemoglobin in red blood cells. Values below 95% warrant medical attention.'},
+  ABI:     {name:'Ankle-Brachial Index',   unit:'',       cat:'Cardiac',min:0.9,max:1.4,  desc:'Ratio of ankle to arm blood pressure. Below 0.9 suggests peripheral arterial disease.'},
+  // Renal
+  eGFR:    {name:'eGFR (MDRD)',            unit:'mL/min', cat:'Renal', min:60,  max:null, desc:'Estimated kidney filtration rate. Values below 60 mL/min suggest chronic kidney disease.'},
+  // Inflammation
+  HsCRP:   {name:'High-sensitivity CRP',   unit:'mg/L',   cat:'Inflam',min:null,max:3,   custom:true, desc:'Measures low-level systemic inflammation. A sensitive independent marker of cardiovascular risk.'},
+  // Body
+  BMI:     {name:'BMI',                    unit:'kg/m²',  cat:'Body',  min:18.5,max:24.9, desc:'Body Mass Index — weight relative to height squared. Healthy range is 18.5–24.9 kg/m².'},
+  Weight:  {name:'Body Weight',            unit:'kg',     cat:'Body',  min:null,max:null,  tracking:true, desc:'Body weight tracked over time. Most useful for monitoring trends rather than single readings.'},
+  EyePress:{name:'Eye Pressure (IOP)',     unit:'mmHg',   cat:'Body',  min:10,  max:21,   desc:'Intraocular pressure. Chronically elevated IOP (>21 mmHg) is a major risk factor for glaucoma.'},
+  Grip:    {name:'Grip Strength',          unit:'kg',     cat:'Body',  min:null,max:null,  tracking:true, desc:'Handgrip strength correlates with overall muscle health and is a strong predictor of longevity.'},
+};
+
+// ════════════════════════════════════════════════════
+//  SEED DATA (demo — fictitious values for illustration)
+// ════════════════════════════════════════════════════
+// Demo seed — fictitious data for illustration purposes only
+const DEMO_SEED = [
+  { date:'2022-03-10', label:'Annual Checkup 2022',
+    biomarkers:{WBC:6.1,RBC:4.75,HGB:14.3,HCT:43.0,MCV:91.0,MCH:30.1,MCHC:33.2,RDW:13.2,PLT:240,
+      NEUT_P:55.0,LYMPH_P:30.0,MONO_P:9.0,EOS_P:5.0,BASO_P:1.0,
+      NEUT_A:3.36,LYMPH_A:1.83,MONO_A:0.55,EOS_A:0.31,BASO_A:0.06,
+      Na:140,K:4.2,GLUC:95,UREA:38,CREA:0.82,UA:5.2,ESR:8,
+      TC:185,TRIG:110,HDL:48,LDL:115,AST:22,ALT:26,ALP:68,Fe:95,Ferritin:88}},
+
+  { date:'2023-01-18', label:'GP Blood Panel',
+    biomarkers:{HGB:14.6,HCT:43.5,MCV:90.2,MCHC:33.6,
+      Na:138,K:4.0,CREA:0.80,UREA:34.0,eGFR:90,HbA1c:39,
+      NEUT_A:3.10,LYMPH_A:1.65,EOS_A:0.18,BASO_A:0.04,
+      Globulin:27,SpO2:98}},
+
+  { date:'2023-06-05', label:'Cardiology Review',
+    biomarkers:{SBP:118,DBP:76,HR:62},
+    notes:'Resting ECG normal sinus rhythm. BP well controlled.'},
+
+  { date:'2023-11-22', label:'Lipid & Metabolic Panel',
+    biomarkers:{Na:141,K:3.9,eGFR:90,CREA:0.85,HbA1c:41,
+      TC:170,TRIG:130,HDL:45,LDL:99,NonHDL:125}},
+
+  { date:'2024-08-14', label:'Annual Checkup 2024',
+    biomarkers:{Na:139,K:4.1,eGFR:90,CREA:0.79,HbA1c:38,ALT:21,
+      TC:162,TRIG:95,HDL:50,LDL:93,NonHDL:112}},
+
+  { date:'2025-01-09', label:'Health Scan',
+    biomarkers:{TC:158,HDL:52,NonHDL:106,LDL:89,TRIG:88,
+      HsCRP:0.8,EyePress:15,Grip:42,Weight:78,
+      LYMPH_A:1.7,EOS_A:0.15,BASO_A:0.03,
+      HGB:14.8,WBC:5.5,NEUT_A:3.2,
+      BMI:25,HbA1c:38,GLUC:96,
+      SBP:122,DBP:79,SpO2:98,ABI:1.15,HR:65}},
+];
+
+// ════════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════════
+const S = {profiles:[], activeId:'', tab:'overview', sel:'HGB', chart:null, flipped:new Set()};
+
+function ap(){ return S.profiles.find(p=>p.id===S.activeId)||S.profiles[0]||null; }
+function readings(){ return ap()?.readings||[]; }
+
+// ════════════════════════════════════════════════════
+//  DATA MANAGEMENT
+// ════════════════════════════════════════════════════
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const d = JSON.parse(raw);
+      S.profiles = d.profiles||[];
+      S.activeId = d.activeId||S.profiles[0]?.id||'';
+    } else {
+      const demo = {id:'demo',name:'Demo User',color:'#0EA5E9',readings:JSON.parse(JSON.stringify(DEMO_SEED))};
+      S.profiles = [demo]; S.activeId = 'demo'; saveData();
+    }
+  } catch {
+    const demo = {id:'demo',name:'Demo User',color:'#0EA5E9',readings:JSON.parse(JSON.stringify(DEMO_SEED))};
+    S.profiles = [demo]; S.activeId = 'demo';
+  }
+  S.profiles.forEach(p=>p.readings.sort((a,b)=>new Date(a.date)-new Date(b.date)));
+}
+
+function saveData(){ localStorage.setItem(STORAGE_KEY,JSON.stringify({activeId:S.activeId,profiles:S.profiles})); }
+
+function switchProfile(id){
+  S.activeId = id; S.flipped.clear(); saveData();
+  setAccentColor(ap()?.color||'#0EA5E9'); closeProfileMenu(); renderApp();
+  toast(`Switched to ${ap()?.name}`);
+}
+
+function setAccentColor(col){
+  document.documentElement.style.setProperty('--accent',col);
+  document.documentElement.style.setProperty('--accent-dk',shadeColor(col,-15));
+  document.documentElement.style.setProperty('--accent-lt',hexToRgba(col,0.1));
+}
+function shadeColor(hex,pct){ const n=parseInt(hex.replace('#',''),16); const r=Math.min(255,Math.max(0,(n>>16)+(pct/100*255)|0)); const g=Math.min(255,Math.max(0,((n>>8)&0xff)+(pct/100*255)|0)); const b=Math.min(255,Math.max(0,(n&0xff)+(pct/100*255)|0)); return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1); }
+function hexToRgba(hex,a){ const n=parseInt(hex.replace('#',''),16); return `rgba(${n>>16},${(n>>8)&0xff},${n&0xff},${a})`; }
+function initials(name){ return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
+
+function exportJSON(){
+  const p=ap(); if(!p) return;
+  const header=`// HEALTH DASHBOARD — IMPORT FORMAT\n// Profile: ${p.name}\n// Biomarker keys: ${Object.keys(BM).join(', ')}\n// Lipids in mg/dL (convert mmol/L: chol ×38.67, trig ×88.57)\n//\n`;
+  const blob=new Blob([header+JSON.stringify({readings:p.readings},null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`health_${p.name.toLowerCase()}.json`; a.click(); URL.revokeObjectURL(a.href); toast('Exported ✓');
+}
+
+function onImport(e){
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const cleaned=ev.target.result.replace(/^\/\/.*$/gm,'').trim();
+      const data=JSON.parse(cleaned); const p=ap(); if(!p) return;
+      let arr=Array.isArray(data)?data:(data.readings||[data]); let added=0,upd=0;
+      arr.forEach(rd=>{ if(!rd.date||!rd.biomarkers) return; const idx=p.readings.findIndex(x=>x.date===rd.date); if(idx>=0){Object.assign(p.readings[idx].biomarkers,rd.biomarkers);if(rd.label)p.readings[idx].label=rd.label;upd++;}else{p.readings.push(rd);added++;} });
+      p.readings.sort((a,b)=>new Date(a.date)-new Date(b.date)); saveData(); renderApp(); toast(`Imported: ${added} new, ${upd} updated`);
+    } catch{ toast('⚠ Could not parse file'); }
+  };
+  r.readAsText(f); e.target.value='';
+}
+
+function deleteReading(date){
+  if(!confirm(`Delete reading: ${fmtDate(date)}?`)) return;
+  const p=ap(); if(!p) return;
+  p.readings=p.readings.filter(x=>x.date!==date);
+  saveData(); renderApp(); toast('Reading deleted');
+}
+
+// ════════════════════════════════════════════════════
+//  STATUS LOGIC
+// ════════════════════════════════════════════════════
+function getStatus(key,v){
+  if(v==null||isNaN(v)) return 'unknown';
+  const b=BM[key]; if(!b) return 'unknown';
+  if(b.tracking) return 'tracking';
+  if(key==='TC'){   return v<170?'normal':v<=199?'borderline':'high'; }
+  if(key==='TRIG'){ return v<150?'normal':v<=199?'borderline':'high'; }
+  if(key==='HDL'){  return v>=60?'optimal':v>=40?'normal':'low'; }
+  if(key==='LDL'||key==='NonHDL'){ return v<100?'optimal':v<130?'normal':v<160?'borderline':'high'; }
+  if(key==='HsCRP'){ return v<1?'optimal':v<=3?'normal':'high'; }
+  if(key==='HbA1c'){ return v<42?'normal':v<=47?'borderline':'high'; }
+  if(key==='SBP'){ return v<120?'normal':v<=129?'borderline':'high'; }
+  if(key==='DBP'){ return v<80?'normal':v<=89?'borderline':'high'; }
+  if(b.min!=null&&v<b.min) return 'low';
+  if(b.max!=null&&v>b.max) return 'high';
+  return 'normal';
+}
+function sLabel(s){ return {normal:'Normal',optimal:'Optimal',borderline:'Borderline',high:'High',low:'Low',tracking:'Tracking',unknown:'—'}[s]||s; }
+function sColor(s){ return {normal:'#2E86C1',optimal:'#1A7A5E',borderline:'#B45309',high:'#CC2222',low:'#CC2222',tracking:'#94A3B8',unknown:'#CBD5E1'}[s]||'#CBD5E1'; }
+
+function refStr(key){
+  const b=BM[key]; if(!b) return '';
+  if(key==='TC') return '<170 desirable'; if(key==='TRIG') return '<150 normal';
+  if(key==='HDL') return '≥40 (≥60 opt.)'; if(key==='LDL'||key==='NonHDL') return '<130 (<100 opt.)';
+  if(key==='HsCRP') return '<3 (<1 opt.)'; if(key==='HbA1c') return '<42 (≥48 diab.)';
+  if(key==='SBP') return '<120 normal'; if(key==='DBP') return '<80 normal';
+  if(b.tracking) return 'Tracking';
+  if(b.min!=null&&b.max!=null) return `${b.min}–${b.max}`;
+  if(b.min!=null) return `≥${b.min}`; if(b.max!=null) return `≤${b.max}`; return '';
+}
+
+function makeRangeBar(key,v){
+  const b=BM[key]; if(!b||v==null||b.tracking) return '';
+  const s=getStatus(key,v), col=sColor(s); let lo,hi;
+  if(key==='TC'){lo=100;hi=280;} else if(key==='TRIG'){lo=0;hi=320;} else if(key==='HDL'){lo=15;hi=100;}
+  else if(key==='LDL'||key==='NonHDL'){lo=40;hi=230;} else if(key==='HsCRP'){lo=0;hi=10;}
+  else if(key==='HR'){lo=40;hi=120;} else if(key==='eGFR'){lo=0;hi=120;}
+  else if(key==='SBP'){lo=80;hi=180;} else if(key==='DBP'){lo=50;hi=130;}
+  else if(key==='SpO2'){lo=85;hi=100;} else if(key==='ABI'){lo=0;hi=2;}
+  else if(key==='HbA1c'){lo=20;hi=60;} else if(key==='BMI'){lo=15;hi=40;}
+  else{ const span=((b.max||0)-(b.min||0))||Math.max(b.max||b.min||1)*0.5||1; const pad=span*0.28; lo=(b.min!=null?b.min:(b.max||0)-span)-pad; hi=(b.max!=null?b.max:(b.min||0)+span)+pad; }
+  const tot=hi-lo;
+  const rl=b.min!=null?Math.max(0,((b.min-lo)/tot)*100):0;
+  const rr=b.max!=null?Math.min(100,((b.max-lo)/tot)*100):100;
+  const vp=Math.max(3,Math.min(97,((v-lo)/tot)*100));
+  return `<div class="rbar-wrap"><div class="rbar-zone" style="left:${rl}%;width:${rr-rl}%;background:rgba(16,185,129,.15)"></div><div class="rbar-dot" style="left:${vp}%;background:${col}"></div></div>`;
+}
+
+// ════════════════════════════════════════════════════
+//  FLIP CARD
+// ════════════════════════════════════════════════════
+function flipCard(key, e){
+  if(e) e.stopPropagation();
+  const card = document.querySelector(`.bm-card[data-key="${key}"]`);
+  if(!card) return;
+  card.classList.toggle('flipped');
+  if(card.classList.contains('flipped')) S.flipped.add(key);
+  else S.flipped.delete(key);
+}
+
+// ════════════════════════════════════════════════════
+//  RENDER
+// ════════════════════════════════════════════════════
+function renderApp(){
+  document.getElementById('app').innerHTML = renderHeader()+renderTabsBar()+`<div class="main">${renderContent()}</div>`;
+  if(S.tab==='trends') renderChart();
+}
+
+function renderHeader(){
+  const p=ap(); const rds=readings(); const latest=rds.length?fmtDate(rds[rds.length-1].date):'—';
+  const profHtml=S.profiles.map(pr=>`
+    <div class="pd-item${pr.id===S.activeId?' active':''}" onclick="switchProfile('${pr.id}')">
+      <div class="p-avatar" style="background:${pr.color};width:26px;height:26px;font-size:10px;border-radius:8px">${initials(pr.name)}</div>
+      <span class="pd-name">${pr.name}</span>
+      <span class="pd-count">${pr.readings.length} rdg${pr.readings.length!==1?'s':''}</span>
+      <span class="pd-check">${pr.id===S.activeId?'✓':''}</span>
+    </div>`).join('');
+  return `<div class="hdr">
+    <div class="hdr-brand">
+      <div class="hdr-icon">🩺</div>
+      <div><div class="hdr-title">HealthIQ</div>
+      <div class="hdr-sub">${p?p.name:'—'} · ${rds.length} reading${rds.length!==1?'s':''} · Latest: ${latest}</div></div>
+    </div>
+    <div class="profile-wrap">
+      <div class="profile-pill" onclick="toggleProfileMenu()">
+        <div class="p-avatar" style="background:${p?.color||'#94A3B8'}">${p?initials(p.name):'?'}</div>
+        <span class="p-name">${p?.name||'Select'}</span>
+        <span class="p-caret" id="p-caret">▾</span>
+      </div>
+      <div class="profile-dropdown" id="profile-menu">
+        <div class="pd-hdr">Profiles</div>${profHtml}
+        <div class="pd-sep"></div>
+        <div class="pd-action" onclick="openProfileMgr()">
+          <div class="pd-action-icon" style="background:#F1F5F9">⚙️</div>Manage Profiles
+        </div>
+      </div>
+    </div>
+    <div class="hdr-acts">
+      <button class="btn btn-sec" onclick="document.getElementById('file-imp').click()">↑ Import</button>
+      <button class="btn btn-sec" onclick="exportJSON()">↓ Export</button>
+      <button class="btn btn-pri" onclick="openAdd()">+ Add Reading</button>
+    </div>
+  </div>`;
+}
+
+function renderTabsBar(){
+  return `<div class="tabs-bar"><div class="tabs">${
+    [['overview','Overview'],['trends','Trends'],['table','Table']].map(([id,l])=>
+      `<div class="tab${S.tab===id?' active':''}" onclick="setTab('${id}')">${l}</div>`).join('')
+  }</div></div>`;
+}
+
+function renderContent(){
+  return S.tab==='overview'?renderOverview():S.tab==='trends'?renderTrends():renderTable();
+}
+
+// ── OVERVIEW ─────────────────────────────────────────
+function renderOverview(){
+  const rds=readings();
+  if(!rds.length) return `<div class="empty"><div class="empty-icon">🩺</div><div class="empty-title">No data — add a reading</div></div>`;
+  const lat=rds[rds.length-1]; let norm=0,bord=0,abn=0;
+  Object.entries(lat.biomarkers).forEach(([k,v])=>{ const s=getStatus(k,v); if(s==='borderline')bord++; else if(s==='high'||s==='low')abn++; else norm++; });
+
+  const sum=`<div class="sum-bar">
+    <div class="sum-card"><div class="lbl">Readings</div><div class="val c-blue">${rds.length}</div></div>
+    <div class="sum-card"><div class="lbl">Latest</div><div class="val c-dim">${fmtDate(lat.date)}</div></div>
+    <div class="sum-card"><div class="lbl">Normal / Optimal</div><div class="val c-ok">${norm}</div></div>
+    <div class="sum-card"><div class="lbl">Borderline</div><div class="val c-warn">${bord}</div></div>
+    <div class="sum-card"><div class="lbl">Abnormal</div><div class="val c-bad">${abn}</div></div>
+  </div>`;
+
+  const secs=Object.keys(CATS).map(cat=>{
+    const entries=Object.entries(BM).filter(([,b])=>b.cat===cat);
+    const cards=entries.map(([key,b])=>{
+      const v=lat.biomarkers[key]; if(v==null) return '';
+      const s=getStatus(key,v), col=sColor(s);
+      const isFlipped=S.flipped.has(key);
+      return `<div class="bm-card${isFlipped?' flipped':''}" data-key="${key}">
+        <div class="bm-inner">
+          <div class="bm-front" onclick="viewTrend('${key}')" title="Click to view trend">
+            <div class="bm-top">
+              <div class="bm-name">${b.name}</div>
+              <button class="bm-info" onclick="flipCard('${key}',event)" title="About this marker"><i>i</i></button>
+            </div>
+            <div class="bm-val-row">
+              <div><span class="bm-val" style="color:${col}">${v}</span> <span class="bm-unit">${b.unit}</span></div>
+              <div class="bm-right"><span class="badge b-${s}">${sLabel(s)}</span><span class="bm-ref">${refStr(key)}</span></div>
+            </div>
+            ${makeRangeBar(key,v)}
+          </div>
+          <div class="bm-back" onclick="flipCard('${key}',event)">
+            <div class="bm-back-name">${b.name}</div>
+            <div class="bm-back-desc">${b.desc||'No description available.'}</div>
+            <div class="bm-back-hint">tap to flip back ←</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    if(!cards.trim()) return '';
+    return `<div class="cat-sec"><div class="cat-hdr">${CATS[cat]}</div><div class="bm-grid">${cards}</div></div>`;
+  }).join('');
+
+  const notesHtml=lat.notes?`<div class="notes-pill"><span>📋</span>${lat.notes}</div>`:'';
+  return sum+secs+notesHtml;
+}
+
+// ── TRENDS ───────────────────────────────────────────
+function renderTrends(){
+  const rds=readings();
+  const sidebar=Object.keys(CATS).map(cat=>{
+    const entries=Object.entries(BM).filter(([,b])=>b.cat===cat);
+    const items=entries.map(([key,b])=>{ const lat=rds[rds.length-1]; const v=lat?.biomarkers[key]; const col=v!=null?sColor(getStatus(key,v)):'#CBD5E1'; return `<div class="ts-item${S.sel===key?' active':''}" onclick="setSel('${key}')"><span>${b.name}</span><span class="ts-dot" style="background:${col}"></span></div>`; }).join('');
+    return `<div class="ts-cat">${CATS[cat]}</div>${items}`;
+  }).join('');
+  const b=BM[S.sel]; const hasData=rds.filter(r=>r.biomarkers[S.sel]!=null).length;
+  const tip=hasData<2?`<div class="tip">💡 Add more readings to see trends. Use <strong>Import</strong> or <strong>+ Add Reading</strong>.</div>`:'';
+  return `<div class="trends-layout">
+    <div class="ts-sidebar">${sidebar}</div>
+    <div class="trends-main">
+      <div class="tc-title">${b?b.name:'—'}</div>
+      <div class="tc-sub">${b?`${b.unit} · Ref: ${refStr(S.sel)}`:''}</div>
+      ${b?.desc?`<div style="font-size:12px;color:#64748B;margin-top:6px;line-height:1.5">${b.desc}</div>`:''}
+      <div class="tc-wrap"><canvas id="tc"></canvas></div>${tip}
+    </div>
+  </div>`;
+}
+
+function renderChart(){
+  const key=S.sel, b=BM[key]; if(!b) return;
+  const canvas=document.getElementById('tc'); if(!canvas) return;
+  if(S.chart){S.chart.destroy();S.chart=null;}
+  const rds=readings().filter(r=>r.biomarkers[key]!=null); if(!rds.length) return;
+  const labels=rds.map(r=>fmtDate(r.date)); const vals=rds.map(r=>r.biomarkers[key]); const ptCols=vals.map(v=>sColor(getStatus(key,v)));
+  const all=[...vals,b.min,b.max].filter(x=>x!=null); const span=Math.max(...all)-Math.min(...all)||Math.max(...all)*0.2||1;
+  const yMin=Math.min(...all)-span*0.25, yMax=Math.max(...all)+span*0.25;
+  const accentCol=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#0EA5E9';
+  const datasets=[{label:b.name,data:vals,borderColor:accentCol,backgroundColor:hexToRgba(accentCol,0.06),borderWidth:2.5,pointBackgroundColor:ptCols,pointBorderColor:'#fff',pointBorderWidth:2.5,pointRadius:7,pointHoverRadius:10,tension:0.3,fill:false,spanGaps:true}];
+  if(b.max!=null) datasets.push({label:`Upper ref (${b.max})`,data:labels.map(()=>b.max),borderColor:'rgba(239,68,68,.3)',borderWidth:1.5,borderDash:[5,5],pointRadius:0,fill:false});
+  if(b.min!=null) datasets.push({label:`Lower ref (${b.min})`,data:labels.map(()=>b.min),borderColor:'rgba(16,185,129,.4)',borderWidth:1.5,borderDash:[5,5],pointRadius:0,fill:false});
+  S.chart=new Chart(canvas,{type:'line',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},plugins:{legend:{display:true,labels:{usePointStyle:true,font:{size:12},color:'#94A3B8'}},tooltip:{callbacks:{label:ctx=>{if(ctx.datasetIndex===0){const s=getStatus(key,ctx.raw);return ` ${ctx.raw} ${b.unit}  (${sLabel(s)})`;}return ` ${ctx.dataset.label}`;}}}}  ,scales:{y:{min:yMin,max:yMax,grid:{color:'#F1F5F9'},ticks:{color:'#94A3B8'},title:{display:true,text:b.unit,color:'#CBD5E1',font:{size:12}}},x:{grid:{display:false},ticks:{color:'#94A3B8'}}}}});
+}
+
+// ── TABLE ─────────────────────────────────────────────
+function renderTable(){
+  const rds=readings();
+  if(!rds.length) return `<div class="empty"><div class="empty-icon">📋</div><div class="empty-title">No data</div></div>`;
+  const dates=rds.map(r=>r.date);
+  const dHdrs=dates.map(d=>`<th style="min-width:120px">${fmtDate(d)}<br><span style="font-weight:500;color:#94A3B8;text-transform:none;font-size:10px">${rds.find(r=>r.date===d)?.label||''}</span><br><button class="btn btn-del" onclick="deleteReading('${d}')">× del</button></th>`).join('');
+  const rows=Object.keys(CATS).map(cat=>{
+    const entries=Object.entries(BM).filter(([,b])=>b.cat===cat);
+    const catRow=`<tr class="cat-row"><td colspan="${dates.length+3}">${CATS[cat]}</td></tr>`;
+    const bmRows=entries.map(([key,b])=>{ const rt=(refStr(key)||'—').replace(/</g,'&lt;').replace(/>/g,'&gt;'); const cells=dates.map(d=>{ const r=rds.find(x=>x.date===d); const v=r?.biomarkers[key]; if(v==null) return `<td style="color:#E2E8F0;text-align:center">—</td>`; return `<td class="td-val td-${getStatus(key,v)}">${v}</td>`; }).join(''); return `<tr><td class="td-name">${b.name}</td><td class="td-unit">${b.unit}</td><td class="td-ref">${rt}</td>${cells}</tr>`; }).join('');
+    return catRow+bmRows;
+  }).join('');
+  const noteRow=`<tr class="cat-row"><td colspan="${dates.length+3}">Notes</td></tr>`+`<tr><td class="td-name" colspan="3" style="color:#94A3B8;font-size:12px">Clinical notes</td>${dates.map(d=>`<td style="font-size:11px;color:#64748B;max-width:180px;white-space:normal">${rds.find(r=>r.date===d)?.notes||''}</td>`).join('')}</tr>`;
+  return `<div class="tbl-outer"><table class="dtbl"><thead><tr><th>Biomarker</th><th>Unit</th><th>Ref.</th>${dHdrs}</tr></thead><tbody>${rows}${noteRow}</tbody></table></div>`;
+}
+
+// ════════════════════════════════════════════════════
+//  PROFILE MENU
+// ════════════════════════════════════════════════════
+function toggleProfileMenu(){
+  const m=document.getElementById('profile-menu'), c=document.getElementById('p-caret');
+  const open=m.classList.toggle('open'); if(c) c.classList.toggle('open',open);
+  if(open) setTimeout(()=>document.addEventListener('click',closeProfileMenuOutside,{once:true}),0);
+}
+function closeProfileMenuOutside(e){ const w=document.querySelector('.profile-wrap'); if(w&&!w.contains(e.target)) closeProfileMenu(); }
+function closeProfileMenu(){ const m=document.getElementById('profile-menu'),c=document.getElementById('p-caret'); if(m)m.classList.remove('open'); if(c)c.classList.remove('open'); }
+
+// ════════════════════════════════════════════════════
+//  PROFILE MANAGER
+// ════════════════════════════════════════════════════
+function openProfileMgr(){
+  closeProfileMenu();
+  const el=document.createElement('div'); el.id='pmgr-modal'; el.className='overlay';
+  el.onclick=e=>{if(e.target===el)closePMgr();};
+  el.innerHTML=`<div class="modal modal-sm" onclick="event.stopPropagation()"><div class="m-hdr"><div class="m-title">Manage Profiles</div><button class="m-close" onclick="closePMgr()">✕</button></div><div class="m-body" id="pmgr-body">${renderPMgrBody()}</div></div>`;
+  document.body.appendChild(el);
+}
+function renderPMgrBody(){
+  const list=S.profiles.map(p=>{ const canDel=S.profiles.length>1; return `<div class="prof-row"><div class="prof-avatar" style="background:${p.color}">${initials(p.name)}</div><div class="prof-info"><div class="prof-name">${p.name}</div><div class="prof-meta">${p.readings.length} reading${p.readings.length!==1?'s':''}${p.id===S.activeId?' · Active':''}</div></div><div class="prof-actions"><button class="btn btn-sec btn-sm" onclick="openEditProfile('${p.id}')">✏ Edit</button>${canDel?`<button class="btn btn-danger btn-sm" onclick="deleteProfile('${p.id}')">× Delete</button>`:''}</div></div>`; }).join('');
+  return `<div class="prof-list">${list}</div><button class="prof-add" onclick="openNewProfile()">⊕ Add new profile</button>`;
+}
+function refreshPMgr(){ const b=document.getElementById('pmgr-body'); if(b) b.innerHTML=renderPMgrBody(); }
+function closePMgr(){ const m=document.getElementById('pmgr-modal'); if(m) m.remove(); }
+
+function openNewProfile(){
+  closeProfileMenu();
+  const el=document.createElement('div'); el.id='padd-modal'; el.className='overlay';
+  el.onclick=e=>{if(e.target===el)closePAdd();};
+  const sw=PROFILE_COLORS.map((c,i)=>`<div class="color-swatch${i===0?' selected':''}" style="background:${c}" onclick="selectSwatch(this,'${c}')" data-color="${c}"></div>`).join('');
+  el.innerHTML=`<div class="modal modal-sm" onclick="event.stopPropagation()"><div class="m-hdr"><div class="m-title">New Profile</div><button class="m-close" onclick="closePAdd()">✕</button></div><div class="m-body"><div class="fg"><label class="flbl">Name *</label><input class="fin" type="text" id="np-name" placeholder="e.g. Sarah" maxlength="30" autofocus></div><div class="fg"><label class="flbl">Colour</label><div class="color-row">${sw}</div></div><input type="hidden" id="np-color" value="${PROFILE_COLORS[0]}"></div><div class="m-ftr"><span></span><div style="display:flex;gap:8px"><button class="btn btn-ghost" onclick="closePAdd()">Cancel</button><button class="btn btn-pri" onclick="submitNewProfile()">Create</button></div></div></div>`;
+  document.body.appendChild(el);
+}
+function closePAdd(){ const m=document.getElementById('padd-modal'); if(m) m.remove(); }
+function selectSwatch(el,color){ document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('selected')); el.classList.add('selected'); const ci=document.getElementById('np-color')||document.getElementById('ep-color'); if(ci) ci.value=color; }
+function submitNewProfile(){ const name=(document.getElementById('np-name')?.value||'').trim(); if(!name){toast('⚠ Enter a name');return;} if(S.profiles.find(p=>p.name.toLowerCase()===name.toLowerCase())){toast('⚠ Name already in use');return;} const color=document.getElementById('np-color')?.value||PROFILE_COLORS[0]; S.profiles.push({id:'p'+Date.now(),name,color,readings:[]}); saveData(); closePAdd(); refreshPMgr(); toast(`Profile "${name}" created`); }
+
+function openEditProfile(id){
+  const p=S.profiles.find(x=>x.id===id); if(!p) return;
+  const el=document.createElement('div'); el.id='pedit-modal'; el.className='overlay';
+  el.onclick=e=>{if(e.target===el)closePEdit();};
+  const sw=PROFILE_COLORS.map(c=>`<div class="color-swatch${c===p.color?' selected':''}" style="background:${c}" onclick="selectSwatch(this,'${c}')" data-color="${c}"></div>`).join('');
+  el.innerHTML=`<div class="modal modal-sm" onclick="event.stopPropagation()"><div class="m-hdr"><div class="m-title">Edit Profile</div><button class="m-close" onclick="closePEdit()">✕</button></div><div class="m-body"><input type="hidden" id="ep-id" value="${id}"><div class="fg"><label class="flbl">Name *</label><input class="fin" type="text" id="ep-name" value="${p.name}" maxlength="30"></div><div class="fg"><label class="flbl">Colour</label><div class="color-row">${sw}</div></div><input type="hidden" id="ep-color" value="${p.color}"></div><div class="m-ftr"><span></span><div style="display:flex;gap:8px"><button class="btn btn-ghost" onclick="closePEdit()">Cancel</button><button class="btn btn-pri" onclick="submitEditProfile()">Save</button></div></div></div>`;
+  document.body.appendChild(el);
+}
+function closePEdit(){ const m=document.getElementById('pedit-modal'); if(m) m.remove(); }
+function submitEditProfile(){ const id=document.getElementById('ep-id')?.value; const name=(document.getElementById('ep-name')?.value||'').trim(); if(!name){toast('⚠ Enter a name');return;} const p=S.profiles.find(x=>x.id===id); if(!p) return; const color=document.getElementById('ep-color')?.value||p.color; p.name=name; p.color=color; if(id===S.activeId) setAccentColor(color); saveData(); closePEdit(); refreshPMgr(); renderApp(); toast('Profile updated ✓'); }
+
+function deleteProfile(id){ const p=S.profiles.find(x=>x.id===id); if(!p) return; if(S.profiles.length<=1){toast('⚠ Cannot delete the only profile');return;} if(!confirm(`Delete profile "${p.name}" and all ${p.readings.length} reading(s)? This cannot be undone.`)) return; S.profiles=S.profiles.filter(x=>x.id!==id); if(S.activeId===id) S.activeId=S.profiles[0].id; saveData(); setAccentColor(ap()?.color||'#0EA5E9'); refreshPMgr(); renderApp(); toast(`Profile "${p.name}" deleted`); }
+
+// ════════════════════════════════════════════════════
+//  ADD READING MODAL
+// ════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════
+//  SCAN DOCUMENT FEATURE
+// ════════════════════════════════════════════════════
+const SCAN_ALIASES = {
+  WBC:     ['white blood cell count','white blood cells','white cell count','leukocyte count','leukocytes','wbc'],
+  RBC:     ['red blood cell count','red blood cells','red cell count','erythrocytes','rbc'],
+  HGB:     ['haemoglobin','hemoglobin','hgb','hb'],
+  HCT:     ['haematocrit','hematocrit','packed cell volume','pcv','hct'],
+  MCV:     ['mean cell volume','mean corpuscular volume','mean corp volume','mcv'],
+  MCH:     ['mean cell haemoglobin','mean corpuscular haemoglobin','mean cell hgb','mch'],
+  MCHC:    ['mean cell haemoglobin conc','mean corpuscular haemoglobin concentration','mean cell haemoglobin concentration','mchc'],
+  RDW:     ['red cell distribution width','red blood cell distribution width','rdw'],
+  PLT:     ['platelet count','platelets','plt'],
+  NEUT_P:  ['neutrophils %','neutrophil %','neut %','% neutrophils','neutrophil percentage'],
+  LYMPH_P: ['lymphocytes %','lymphocyte %','lymph %','% lymphocytes','lymphocyte percentage'],
+  MONO_P:  ['monocytes %','monocyte %','mono %','% monocytes'],
+  EOS_P:   ['eosinophils %','eosinophil %','eos %','% eosinophils'],
+  BASO_P:  ['basophils %','basophil %','baso %','% basophils'],
+  NEUT_A:  ['neutrophils','neutrophil count','neut count','neutro'],
+  LYMPH_A: ['lymphocytes','lymphocyte count','lymph count'],
+  MONO_A:  ['monocytes','monocyte count','mono count'],
+  EOS_A:   ['eosinophils','eosinophil count','eos count'],
+  BASO_A:  ['basophils','basophil count','baso count'],
+  Na:      ['sodium','serum sodium'],
+  K:       ['potassium','serum potassium'],
+  GLUC:    ['fasting glucose','blood glucose','serum glucose','random glucose','plasma glucose','glucose'],
+  HbA1c:   ['haemoglobin a1c','hemoglobin a1c','glycated haemoglobin','glycohaemoglobin','glycated hemoglobin','hba1c','hb a1c'],
+  UREA:    ['blood urea nitrogen','serum urea','blood urea','urea nitrogen','urea'],
+  CREA:    ['serum creatinine','creatinine serum','creatinine'],
+  eGFR:    ['estimated glomerular filtration rate','estimated gfr','glomerular filtration rate','egfr'],
+  UA:      ['serum uric acid','uric acid'],
+  TC:      ['total cholesterol','cholesterol total','serum cholesterol','cholesterol'],
+  TRIG:    ['triglycerides','triglyceride','triacylglycerol'],
+  HDL:     ['hdl cholesterol','hdl-cholesterol','high density lipoprotein cholesterol','high density lipoprotein','hdl chol','hdl'],
+  LDL:     ['ldl cholesterol','ldl-cholesterol','low density lipoprotein cholesterol','low density lipoprotein','ldl chol','ldl'],
+  NonHDL:  ['non-hdl cholesterol','non hdl cholesterol','non-hdl chol','non-hdl','non hdl'],
+  AST:     ['aspartate aminotransferase','aspartate transaminase','ast','sgot'],
+  ALT:     ['alanine aminotransferase','alanine transaminase','alt','sgpt'],
+  ALP:     ['alkaline phosphatase','alp'],
+  Globulin:['serum globulin','total globulin','globulin'],
+  ESR:     ['erythrocyte sedimentation rate','sed rate','esr'],
+  HsCRP:   ['high sensitivity c-reactive protein','high-sensitivity crp','c-reactive protein','c reactive protein','hs-crp','hscrp','crp'],
+  Fe:      ['serum iron','iron level','iron'],
+  Ferritin:['serum ferritin','ferritin'],
+  HR:      ['heart rate','pulse rate','pulse'],
+  SBP:     ['systolic blood pressure','systolic bp','systolic pressure','systolic'],
+  DBP:     ['diastolic blood pressure','diastolic bp','diastolic pressure','diastolic'],
+  SpO2:    ['oxygen saturation','blood oxygen saturation','o2 saturation','o2 sat','spo2','sp02'],
+  ABI:     ['ankle-brachial index','ankle brachial index','ankle/brachial index','abi'],
+  BMI:     ['body mass index','bmi'],
+  Weight:  ['body weight','weight'],
+  EyePress:['intraocular pressure','eye pressure','iop'],
+  Grip:    ['grip strength','handgrip strength','grip'],
+};
+
+function loadScript(src){
+  return new Promise((res,rej)=>{
+    if(document.querySelector(`script[src="${src}"]`)){res();return;}
+    const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=()=>rej(new Error('Failed to load '+src));
+    document.head.appendChild(s);
+  });
+}
+
+function switchAddMode(mode){
+  const scanPanel=document.getElementById('scan-panel');
+  const manualPanel=document.getElementById('manual-panel');
+  document.querySelectorAll('.add-mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+  if(mode==='scan'){scanPanel.style.display='';manualPanel.style.display='none';}
+  else{scanPanel.style.display='none';manualPanel.style.display='';}
+}
+
+function setupScanDropZone(){
+  const drop=document.getElementById('scan-drop-zone');
+  if(!drop) return;
+  drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('drag-over');});
+  drop.addEventListener('dragleave',()=>drop.classList.remove('drag-over'));
+  drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f)handleScanFile(f);});
+}
+
+async function handleScanFile(file){
+  if(!file) return;
+  const ok=['image/jpeg','image/png','image/bmp','image/tiff','application/pdf'];
+  if(!ok.includes(file.type)){toast('⚠ Please use a PDF, JPG, or PNG file');return;}
+  const dropZone=document.getElementById('scan-drop-zone');
+  const status=document.getElementById('scan-status');
+  const results=document.getElementById('scan-results');
+  const progLbl=document.getElementById('scan-prog-lbl');
+  const progBar=document.getElementById('scan-bar-fill');
+  dropZone.style.display='none'; status.style.display=''; results.style.display='none';
+  try {
+    let fullText='';
+    if(file.type==='application/pdf'){
+      progLbl.textContent='Reading PDF…'; progBar.style.width='15%';
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js');
+      const pdfjsLib=window['pdfjs-dist/build/pdf'];
+      pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+      const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
+      progBar.style.width='35%';
+      // Try fast text extraction first
+      for(let i=1;i<=Math.min(pdf.numPages,5);i++){
+        const pg=await pdf.getPage(i);
+        const tc=await pg.getTextContent();
+        fullText+=tc.items.map(it=>it.str).join(' ')+'\n';
+      }
+      progBar.style.width='60%';
+      // If nearly empty → scanned PDF, fall back to OCR
+      if(fullText.replace(/\s/g,'').length<80){
+        progLbl.textContent='Scanned PDF — running OCR…';
+        fullText=await ocrPDF(pdf,progBar,progLbl);
+      }
+    } else {
+      fullText=await ocrImage(file,progBar,progLbl);
+    }
+    progBar.style.width='95%'; progLbl.textContent='Parsing values…';
+    const detected=parseLabText(fullText);
+    setTimeout(()=>{status.style.display='none';showScanResults(detected);},350);
+  } catch(err){
+    console.error('Scan error:',err);
+    status.style.display='none'; dropZone.style.display='';
+    toast('⚠ Scan failed — try a clearer image or enter manually');
+  }
+}
+
+async function ocrImage(file,progBar,progLbl){
+  progLbl.textContent='Loading OCR engine…'; progBar.style.width='10%';
+  await loadScript('https://unpkg.com/tesseract.js@4/dist/tesseract.min.js');
+  const url=URL.createObjectURL(file);
+  try{
+    const w=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status==='recognizing text'){progBar.style.width=Math.round(15+m.progress*80)+'%';progLbl.textContent='OCR: '+Math.round(m.progress*100)+'%';}}});
+    const {data:{text}}=await w.recognize(url); await w.terminate(); return text;
+  }finally{URL.revokeObjectURL(url);}
+}
+
+async function ocrPDF(pdf,progBar,progLbl){
+  await loadScript('https://unpkg.com/tesseract.js@4/dist/tesseract.min.js');
+  const n=Math.min(pdf.numPages,3); let all='';
+  for(let i=1;i<=n;i++){
+    const pg=await pdf.getPage(i); const vp=pg.getViewport({scale:2});
+    const cv=document.createElement('canvas'); cv.width=vp.width; cv.height=vp.height;
+    await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+    const base=((i-1)/n)*70;
+    const w=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status==='recognizing text'){progBar.style.width=Math.round(40+base+m.progress*70/n)+'%';progLbl.textContent='OCR page '+i+'/'+n+': '+Math.round(m.progress*100)+'%';}}});
+    const {data:{text}}=await w.recognize(cv); await w.terminate(); all+=text+'\n';
+  }
+  return all;
+}
+
+function parseLabText(raw){
+  // Build alias lookup sorted longest-first to prevent partial matches
+  const lookup={}; const aliases=[];
+  Object.entries(SCAN_ALIASES).forEach(([key,list])=>list.forEach(a=>{const l=a.toLowerCase();lookup[l]=key;aliases.push(l);}));
+  aliases.sort((a,b)=>b.length-a.length);
+  const detected={};
+  const lines=raw.split('\n').map(l=>l.replace(/[|_*]/g,' ').trim()).filter(l=>l.length>1);
+  for(const line of lines){
+    const lower=line.toLowerCase();
+    for(const alias of aliases){
+      const pos=lower.indexOf(alias);
+      if(pos===-1) continue;
+      const key=lookup[alias];
+      if(detected[key]) continue;
+      // Extract first number after the alias
+      const after=line.slice(pos+alias.length);
+      const m=after.match(/[>≥<≤]?\s*(\d+\.?\d*)/);
+      if(!m) continue;
+      let val=parseFloat(m[1]); if(isNaN(val)) continue;
+      // Detect unit
+      const lu=line.toUpperCase();
+      let unit=null;
+      if(lu.includes('MMOL/MOL')) unit='mmol/mol';
+      else if(lu.includes('MMOL')) unit='mmol/L';
+      else if(lu.includes('MG/DL')||lu.includes('MG/D')) unit='mg/dL';
+      else if(lu.includes('G/DL')) unit='g/dL';
+      else if(lu.includes('G/L')) unit='g/L';
+      else if(lu.match(/UMOL|ΜMOL|MICROMOL/)) unit='μmol/L';
+      // Apply conversions
+      let note=''; const orig=val;
+      if(['TC','LDL','HDL','NonHDL'].includes(key)&&(unit==='mmol/L'||(unit===null&&val<20))){val=Math.round(val*38.67);note=orig+' mmol/L→mg/dL';}
+      else if(key==='TRIG'&&(unit==='mmol/L'||(unit===null&&val<20))){val=Math.round(val*88.57);note=orig+' mmol/L→mg/dL';}
+      else if(key==='HGB'&&(unit==='g/L'||(unit===null&&val>30))){val=parseFloat((val/10).toFixed(1));note=orig+' g/L→g/dL';}
+      else if(key==='HCT'&&val<2){val=parseFloat((val*100).toFixed(1));note='fraction→%';}
+      else if(key==='CREA'&&(unit==='μmol/L'||(unit===null&&val>20))){val=parseFloat((val/88.4).toFixed(2));note=orig+' μmol/L→mg/dL';}
+      else if(key==='GLUC'&&(unit==='mmol/L'||(unit===null&&val<30))){val=Math.round(val*18.02);note=orig+' mmol/L→mg/dL';}
+      else if(key==='UREA'&&(unit==='mmol/L'||(unit===null&&val<20))){val=parseFloat((val*6.006).toFixed(1));note=orig+' mmol/L→mg/dL';}
+      detected[key]={val,note};
+      break;
+    }
+  }
+  return detected;
+}
+
+function showScanResults(detected){
+  const el=document.getElementById('scan-results'); if(!el) return;
+  el.style.display='';
+  const keys=Object.keys(detected);
+  if(!keys.length){
+    el.innerHTML=`<div class="scan-none"><div style="font-size:32px;margin-bottom:10px">🔍</div><div style="font-weight:600;color:#475569;margin-bottom:4px">No values detected</div><div>Try a clearer scan, or switch to Manual Entry.</div><button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="resetScanPanel()">↺ Try another file</button></div>`;
+    return;
+  }
+  const rows=keys.map(key=>{
+    const b=BM[key]; if(!b) return '';
+    const {val,note}=detected[key];
+    return `<label class="scan-row"><input type="checkbox" class="scan-chk" data-key="${key}" data-val="${val}" checked style="flex-shrink:0"><span class="scan-row-name">${b.name}</span>${note?`<span class="scan-row-conv">↕ ${note}</span>`:''}<span class="scan-row-val">${val}</span><span class="scan-row-unit">${b.unit}</span></label>`;
+  }).join('');
+  el.innerHTML=`<div class="scan-results-hdr">✅ ${keys.length} value${keys.length===1?'':'s'} detected</div><div class="scan-results-sub">Deselect any incorrect values, then click Apply to fill the form.</div><div class="scan-detected">${rows}</div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-ghost btn-sm" onclick="resetScanPanel()">↺ Rescan</button><button class="btn btn-pri" onclick="applyScanToForm()">Apply to form →</button></div>`;
+}
+
+function resetScanPanel(){
+  const d=document.getElementById('scan-drop-zone'),s=document.getElementById('scan-status'),r=document.getElementById('scan-results');
+  if(d)d.style.display=''; if(s)s.style.display='none'; if(r)r.style.display='none';
+  const inp=document.getElementById('scan-file-inp'); if(inp) inp.value='';
+}
+
+function applyScanToForm(){
+  let filled=0;
+  document.querySelectorAll('.scan-chk:checked').forEach(cb=>{
+    const inp=document.getElementById('f-'+cb.dataset.key);
+    if(inp){inp.value=cb.dataset.val;inp.classList.add('ffin-applied');filled++;}
+  });
+  switchAddMode('manual');
+  toast('✓ '+filled+' value'+(filled===1?'':'s')+' applied — review, set date, then save');
+}
+
+function openAdd(){
+  const fields=Object.keys(CATS).map(cat=>{ const entries=Object.entries(BM).filter(([,b])=>b.cat===cat); return `<div class="fsec">${CATS[cat]}</div><div class="fgrid">${entries.map(([key,b])=>`<div><div class="ffl">${b.name}<br><span style="color:#CBD5E1">${b.unit}</span></div><input class="ffin" type="number" step="any" placeholder="—" id="f-${key}"></div>`).join('')}</div>`; }).join('');
+  const today=new Date().toISOString().split('T')[0];
+  const el=document.createElement('div'); el.id='add-modal'; el.className='overlay';
+  el.onclick=e=>{if(e.target===el)closeAdd();};
+  el.innerHTML=`<div class="modal" onclick="event.stopPropagation()">
+    <div class="m-hdr"><div class="m-title">Add Reading</div><button class="m-close" onclick="closeAdd()">✕</button></div>
+    <div class="add-mode-bar">
+      <button class="add-mode-btn active" data-mode="manual" onclick="switchAddMode('manual')">✏️ Manual Entry</button>
+      <button class="add-mode-btn" data-mode="scan" onclick="switchAddMode('scan')">📄 Scan Document</button>
+    </div>
+    <div id="scan-panel" style="display:none"><div class="m-body">
+      <div class="scan-drop" id="scan-drop-zone" onclick="document.getElementById('scan-file-inp').click()">
+        <div class="scan-drop-icon">📄</div>
+        <div class="scan-drop-title">Drop your lab report here</div>
+        <div class="scan-drop-sub">PDF, JPG or PNG — values auto-extracted</div>
+        <button class="btn btn-sec btn-sm" style="margin-top:14px" onclick="event.stopPropagation();document.getElementById('scan-file-inp').click()">Browse files</button>
+        <input type="file" id="scan-file-inp" accept=".pdf,.jpg,.jpeg,.png,.bmp,.tiff" style="display:none" onchange="handleScanFile(this.files[0])">
+      </div>
+      <div id="scan-status" class="scan-progress-wrap" style="display:none">
+        <div class="scan-progress-lbl" id="scan-prog-lbl">Processing…</div>
+        <div class="scan-bar"><div class="scan-bar-fill" id="scan-bar-fill" style="width:0%"></div></div>
+      </div>
+      <div id="scan-results" style="display:none"></div>
+    </div></div>
+    <div id="manual-panel">
+      <div class="m-body"><div class="fg"><label class="flbl">Date *</label><input class="fin" type="date" id="f-date" value="${today}"></div><div class="fg"><label class="flbl">Label</label><input class="fin" type="text" id="f-label" placeholder="e.g. Annual checkup"></div><div class="fg"><label class="flbl">Notes / Clinical comments</label><input class="fin" type="text" id="f-notes" placeholder="e.g. Fasting sample"></div>${fields}</div>
+      <div class="m-ftr"><span style="font-size:12px;color:#94A3B8">Only fill in values you have</span><div style="display:flex;gap:8px"><button class="btn btn-ghost" onclick="closeAdd()">Cancel</button><button class="btn btn-pri" onclick="submitAdd()">Save</button></div></div>
+    </div>
+  </div>`;
+  document.body.appendChild(el);
+  setupScanDropZone();
+}
+function closeAdd(){ const m=document.getElementById('add-modal'); if(m) m.remove(); }
+function submitAdd(){ const date=document.getElementById('f-date').value; if(!date){toast('⚠ Enter a date');return;} const label=document.getElementById('f-label').value.trim(); const notes=document.getElementById('f-notes').value.trim(); const bm={}; Object.keys(BM).forEach(key=>{const el=document.getElementById('f-'+key);if(el&&el.value!=='')bm[key]=parseFloat(el.value);}); if(!Object.keys(bm).length){toast('⚠ Enter at least one value');return;} const p=ap(); if(!p){toast('⚠ No active profile');return;} const idx=p.readings.findIndex(r=>r.date===date); if(idx>=0){Object.assign(p.readings[idx].biomarkers,bm);if(label)p.readings[idx].label=label;if(notes)p.readings[idx].notes=notes;}else{p.readings.push({date,label,notes,biomarkers:bm});p.readings.sort((a,b)=>new Date(a.date)-new Date(b.date));} saveData(); closeAdd(); renderApp(); toast('Saved ✓'); }
+
+// ════════════════════════════════════════════════════
+//  UTILITIES
+// ════════════════════════════════════════════════════
+function fmtDate(d){ return new Date(d+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }
+function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),3000); }
+function setTab(t){ S.tab=t; S.flipped.clear(); renderApp(); }
+function setSel(k){ S.sel=k; renderApp(); }
+function viewTrend(k){ S.sel=k; S.tab='trends'; renderApp(); }
+
+// ════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════
+loadData();
+setAccentColor(ap()?.color||'#0EA5E9');
+renderApp();
+
+// Register service worker for PWA / offline support
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./sw.js')
+      .then(r=>console.log('SW registered:', r.scope))
+      .catch(e=>console.warn('SW registration failed:', e));
+  });
+}
+</script>
+</body>
+</html>
